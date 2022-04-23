@@ -11,14 +11,14 @@ import (
 )
 
 type Wallet struct {
-	publicKey  []byte
-	privateKey []byte
+	PublicKey  []byte `json:"public_key"`
+	PrivateKey []byte `json:"private_key"`
 }
 
 func (w *Wallet) SendMoney(amount float64, payeePublicKey []byte) error {
 	transaction := Transaction{
 		Amount:         amount,
-		PayerPublicKey: w.publicKey,
+		PayerPublicKey: w.PublicKey,
 		PayeePublicKey: payeePublicKey,
 	}
 
@@ -27,19 +27,18 @@ func (w *Wallet) SendMoney(amount float64, payeePublicKey []byte) error {
 		return fmt.Errorf("failed to marshal transaction: %v", err)
 	}
 
-	privateKey, err := x509.ParsePKCS1PrivateKey(w.privateKey)
+	privateKey, err := x509.ParsePKCS1PrivateKey(w.PrivateKey)
 	if err != nil {
 		return fmt.Errorf("failed to parse private key: %v", err)
 	}
 
-	h256 := sha256.New()
-	h256.Write(transactionJSON)
-	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, h256.Sum(nil))
+	h256 := sha256.Sum256(transactionJSON)
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, h256[:])
 	if err != nil {
 		return fmt.Errorf("failed to sign transaction: %v", err)
 	}
 
-	publicKey, err := x509.ParsePKCS1PublicKey(w.publicKey)
+	publicKey, err := x509.ParsePKCS1PublicKey(w.PublicKey)
 	if err != nil {
 		return fmt.Errorf("failed to parse public key: %v", err)
 	}
@@ -60,7 +59,7 @@ func NewWallet() (*Wallet, error) {
 	publickey := &privatekey.PublicKey
 
 	return &Wallet{
-		privateKey: x509.MarshalPKCS1PrivateKey(privatekey),
-		publicKey:  x509.MarshalPKCS1PublicKey(publickey),
+		PrivateKey: x509.MarshalPKCS1PrivateKey(privatekey),
+		PublicKey:  x509.MarshalPKCS1PublicKey(publickey),
 	}, nil
 }

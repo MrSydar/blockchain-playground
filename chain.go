@@ -12,7 +12,7 @@ import (
 )
 
 type Chain struct {
-	Blocks []Block
+	Blocks []Block `json:"blocks"`
 }
 
 var chain *Chain = &Chain{
@@ -35,9 +35,8 @@ func (c *Chain) AddBlock(transaction Transaction, payeePublicKey *rsa.PublicKey,
 		return fmt.Errorf("failed to marshal transaction: %v", err)
 	}
 
-	h256 := sha256.New()
-	h256.Write(transactionJSON)
-	if err := rsa.VerifyPKCS1v15(payeePublicKey, crypto.SHA256, h256.Sum(nil), signature); err != nil {
+	h256 := sha256.Sum256(transactionJSON)
+	if err := rsa.VerifyPKCS1v15(payeePublicKey, crypto.SHA256, h256[:], signature); err != nil {
 		return fmt.Errorf("failed to validate transaction signature: %v", err)
 	}
 
@@ -53,15 +52,19 @@ func (c *Chain) AddBlock(transaction Transaction, payeePublicKey *rsa.PublicKey,
 	return nil
 }
 
+var miningTarget = []byte{0, 0}
+
 func (c *Chain) mine(nonce int) int {
-	target := []byte{0, 0}
+	if len(miningTarget) > 128 {
+		panic(fmt.Errorf("mining target is too long"))
+	}
 
 	fmt.Println("🪨️ Mining...")
 
 	for solution := 1; ; solution++ {
 		hash := md5.Sum([]byte(fmt.Sprintf("%d", nonce+solution)))
-		if reflect.DeepEqual(hash[:4], target) {
-			fmt.Printf("🎉 Block mined!\nSolution: %v", solution)
+		if reflect.DeepEqual(hash[:len(miningTarget)], miningTarget) {
+			fmt.Printf("🎉 Block mined!\nSolution: %v\n", solution)
 			return solution
 		}
 	}
