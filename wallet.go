@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
@@ -30,7 +32,9 @@ func (w *Wallet) SendMoney(amount float64, payeePublicKey []byte) error {
 		return fmt.Errorf("failed to parse private key: %v", err)
 	}
 
-	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, 0, transactionJSON)
+	h256 := sha256.New()
+	h256.Write(transactionJSON)
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, h256.Sum(nil))
 	if err != nil {
 		return fmt.Errorf("failed to sign transaction: %v", err)
 	}

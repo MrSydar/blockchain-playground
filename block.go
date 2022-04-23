@@ -4,21 +4,33 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"time"
 )
 
 type Block struct {
-	PrevBlockHash string      `json:"prev_block_hash"`
+	Nonce int `json:"nonce"`
+
+	PrevBlockHash []byte      `json:"prev_block_hash"`
 	Transaction   Transaction `json:"transaction"`
 	TimeSpamp     int64       `json:"time_stamp"`
 }
 
-// function GetHash return a SHA256 hash of a marshalled Block struct
-func (b *Block) GetHash() (string, error) {
+func (b *Block) GetHash() ([]byte, error) {
 	blockJSON, err := json.Marshal(b)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal block: %v", err)
+		return nil, fmt.Errorf("failed to marshal block: %v", err)
 	}
 
 	hash := sha256.Sum256(blockJSON)
-	return string(hash[:]), nil
+	return hash[:], nil
+}
+
+func NewBlock(previousBlockHash []byte, transaction Transaction) *Block {
+	return &Block{
+		Nonce:         rand.Int(),
+		PrevBlockHash: previousBlockHash,
+		Transaction:   transaction,
+		TimeSpamp:     time.Now().Unix(),
+	}
 }
